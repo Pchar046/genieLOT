@@ -12,6 +12,11 @@
 #' * `"diagnosis"`: day 0 for everyone (the naive approach).
 #' * `"metastasis"`: date of first distant metastasis.
 #' * `"progression"`: first progression event on or after `min_days`.
+#' * `"initial_therapy"`: the first treatment of any kind (drug, plus any
+#'   surgery or radiation passed to [lot_data()] as `therapy`).
+#' * `"progression_after_therapy"`: the challenge's textbook definition: the
+#'   first progression event after initial therapy (surgery, radiation or drug)
+#'   has started, and on or after `min_days`.
 #' * `"custom"`: your own dates, given in `custom`.
 #'
 #' @param x A [lot_data()] object.
@@ -26,6 +31,8 @@
 #' @param stage_iv What to do with stage IV patients: `"diagnosis"` (index at
 #'   day 0) or `"same"` (use the same event as everyone else). Default
 #'   `"diagnosis"` for `"recurrence"`, `"same"` otherwise.
+#' @param therapy_types Which therapy types count as initial therapy for the
+#'   two therapy events (e.g. `c("surgery", "radiation")`). Default: all.
 #' @param upstaged Treat early-stage patients whose distant metastasis was
 #'   found within `min_days` of diagnosis as stage IV (index at diagnosis).
 #'   Their cancer had already spread when found; it is not a recurrence.
@@ -41,18 +48,20 @@
 #' @export
 set_index <- function(x,
                       event = c("recurrence", "diagnosis", "metastasis",
-                                "progression", "custom"),
+                                "progression", "initial_therapy",
+                                "progression_after_therapy", "custom"),
                       prog_source = c("either", "imaging", "med_onc", "both"),
                       confirm_days = 30,
                       min_days = NULL,
                       stage_iv = NULL,
                       upstaged = TRUE,
+                      therapy_types = NULL,
                       custom = NULL) {
   stopifnot(inherits(x, "lot_data"))
   event <- match.arg(event)
   prog_source <- match.arg(prog_source)
-  if (is.null(min_days)) min_days <- if (event == "recurrence") 90 else 0
-  if (is.null(stage_iv)) stage_iv <- if (event == "recurrence") "diagnosis" else "same"
+  if (is.null(min_days)) min_days <- if (event %in% c("recurrence", "progression_after_therapy")) 90 else 0
+  if (is.null(stage_iv)) stage_iv <- if (event %in% c("recurrence", "progression_after_therapy")) "diagnosis" else "same"
   stage_iv <- match.arg(stage_iv, c("diagnosis", "same"))
   cs <- x$cases
 
@@ -63,6 +72,12 @@ set_index <- function(x,
     unname(fp[cs$case_id])
   }
   dmets <- ifelse(!is.na(cs$dmets_day) & cs$dmets_day >= 0, cs$dmets_day, NA)
+  first_therapy <- function() {
+    ev <- all_therapy(x)
+    if (!is.null(therapy_types)) ev <- ev[ev$type %in% therapy_types, , drop = FALSE]
+    ft <- if (nrow(ev)) tapply(ev$day, ev$case_id, min) else numeric(0)
+    unname(ft[cs$case_id])
+  }
 
   day <- switch(event,
     diagnosis = rep(0, nrow(cs)),
@@ -72,6 +87,15 @@ set_index <- function(x,
       fp <- first_prog()
       dm <- ifelse(!is.na(dmets) & dmets >= min_days, dmets, NA)
       suppressWarnings(pmin(fp, dm, na.rm = TRUE))
+    },
+    initial_therapy = first_therapy(),
+    progression_after_therapy = {
+      ft <- first_therapy()
+      p <- progression_days(x$prog, prog_source, confirm_days)
+      p$ft <- ft[match(p$case_id, cs$case_id)]
+      p <- p[!is.na(p$ft) & p$day > p$ft & p$day >= min_days, , drop = FALSE]
+      fp <- if (nrow(p)) tapply(p$day, p$case_id, min) else numeric(0)
+      unname(fp[cs$case_id])
     },
     custom = {
       if (is.null(custom) || !"index_day" %in% names(custom)) {
@@ -101,7 +125,8 @@ set_index <- function(x,
     class = c("lot_index", "data.frame"),
     settings = list(event = event, prog_source = prog_source,
                     confirm_days = confirm_days, min_days = min_days,
-                    stage_iv = stage_iv, upstaged = upstaged)
+                    stage_iv = stage_iv, upstaged = upstaged,
+                    therapy_types = therapy_types)
   )
 }
 
@@ -116,4 +141,11 @@ progression_days <- function(prog, source, confirm_days) {
   m <- merge(img, md, by = "case_id", suffixes = c("_img", "_md"))
   m <- m[abs(m$day_img - m$day_md) <= confirm_days, ]
   data.frame(case_id = m$case_id, day = pmin(m$day_img, m$day_md))
+}
+
+# Every therapy start per case: drug starts plus any surgery/radiation events.
+all_therapy <- function(x) {
+  d <- if (nrow(x$drugs)) data.frame(case_id = x$drugs$case_id, day = x$drugs$start,
+                                     type = "drug", stringsAsFactors = FALSE) else NULL
+  rbind(d, x$therapy)
 }

@@ -18,6 +18,10 @@ Every column the package reads is listed here, so a mismatch is fixed in
 one place: `bpc_columns(stage = "stage_dx")`.
 }
 \details{
+Missing regimen end dates are filled from the last recorded dose of any
+drug in the regimen (columns matching `reg_end_lastdose`, a regular
+expression), then from `reg_end_fallback`. Set either to `NA` to skip it.
+
 Time columns are converted to days since diagnosis of the index cancer.
 Set the matching `*_unit` to "days", "months" or "years".
 }

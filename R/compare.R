@@ -124,3 +124,42 @@ validate_index <- function(x, index, ca_dx, flag_col = "dmets_stage_i_iii",
     stringsAsFactors = FALSE)
   list(table = tab, summary = summary)
 }
+
+#' One-row summary of a cohort, for comparing cancers side by side
+#'
+#' @param x A [lot_data()] object.
+#' @param index Index dates from [set_index()].
+#' @param rules Rules from [lot_rules()] or [lot_preset()].
+#' @param ca_dx Optional raw diagnosis table with `dmets_stage_i_iii`, for the
+#'   validation column.
+#' @param label Cohort name. Default: the cohort column in the data.
+#' @return A one-row data frame. Bind several with `rbind()`.
+#' @examples
+#' sim <- simulate_bpc(80)
+#' x <- lot_data(sim$ca_dx, sim$regimens, sim$imaging, sim$med_onc)
+#' cohort_summary(x, set_index(x), lot_preset("NSCLC"), sim$ca_dx)
+#' @export
+cohort_summary <- function(x, index = set_index(x), rules = lot_rules(),
+                           ca_dx = NULL, label = NULL) {
+  cmp <- compare_lot(x, index, rules)
+  sm <- summarize_lot(cmp$correct)
+  val <- if (!is.null(ca_dx) && "dmets_stage_i_iii" %in% names(ca_dx)) {
+    v <- validate_index(x, index, ca_dx)$summary$value[1]
+    regmatches(v, regexpr("[0-9.]+%", v))
+  } else NA_character_
+  if (is.null(label)) label <- paste(unique(stats::na.omit(x$cases$cohort)), collapse = "/")
+  data.frame(
+    cohort = label,
+    cancer_cases = nrow(x$cases),
+    early_stage = sum(x$cases$early_stage %in% TRUE),
+    stage_iv = sum(x$cases$early_stage %in% FALSE),
+    patients_with_lines = cmp$summary$patients[1],
+    early_recurrences_treated = cmp$summary$patients[2],
+    naive_line1_wrong = cmp$summary$mislabeled[2],
+    pct_naive_line1_wrong = cmp$summary$pct_mislabeled[2],
+    pct_reach_line2 = if (nrow(sm) >= 2) sm$pct_of_indexed[2] else 0,
+    median_days_line1 = if (nrow(sm)) sm$median_days_on_line[1] else NA,
+    flagged_recurrences_handled = val,
+    stringsAsFactors = FALSE
+  )
+}

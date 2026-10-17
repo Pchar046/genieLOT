@@ -6,12 +6,14 @@
 \usage{
 set_index(
   x,
-  event = c("recurrence", "diagnosis", "metastasis", "progression", "custom"),
+  event = c("recurrence", "diagnosis", "metastasis", "progression", "initial_therapy",
+    "progression_after_therapy", "custom"),
   prog_source = c("either", "imaging", "med_onc", "both"),
   confirm_days = 30,
   min_days = NULL,
   stage_iv = NULL,
   upstaged = TRUE,
+  therapy_types = NULL,
   custom = NULL
 )
 }
@@ -39,6 +41,9 @@ found within `min_days` of diagnosis as stage IV (index at diagnosis).
 Their cancer had already spread when found; it is not a recurrence.
 Applies when `stage_iv = "diagnosis"`. Default `TRUE`.}
 
+\item{therapy_types}{Which therapy types count as initial therapy for the
+two therapy events (e.g. `c("surgery", "radiation")`). Default: all.}
+
 \item{custom}{For `event = "custom"`: a data frame with `record_id` (or
 `case_id`) and `index_day` (days since diagnosis).}
 }
@@ -60,6 +65,11 @@ Events:
 * `"diagnosis"`: day 0 for everyone (the naive approach).
 * `"metastasis"`: date of first distant metastasis.
 * `"progression"`: first progression event on or after `min_days`.
+* `"initial_therapy"`: the first treatment of any kind (drug, plus any
+  surgery or radiation passed to [lot_data()] as `therapy`).
+* `"progression_after_therapy"`: the challenge's textbook definition: the
+  first progression event after initial therapy (surgery, radiation or drug)
+  has started, and on or after `min_days`.
 * `"custom"`: your own dates, given in `custom`.
 }
 \examples{

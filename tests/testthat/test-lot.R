@@ -172,3 +172,71 @@ test_that("the app server computes every output", {
     expect_true(nrow(smry()) > 0)
   })
 })
+
+test_that("missing end dates are filled from the last dose", {
+  ca <- data.frame(record_id = "P1", stage_dx_iv = "Stage IV")
+  reg <- data.frame(record_id = "P1", regimen_drugs = "Carboplatin, Pemetrexed Disodium",
+                    dx_reg_start_int = 10, dx_reg_end_all_int = NA,
+                    dx_drug_end_or_lastadm_int_1 = 90, dx_drug_end_or_lastadm_int_2 = 150,
+                    dx_reg_end_any_int = 90)
+  x <- lot_data(ca, reg)
+  expect_equal(unique(x$drugs$end), 150)
+  expect_equal(unique(x$drugs$end_source), "last dose")
+  reg$dx_drug_end_or_lastadm_int_1 <- NA; reg$dx_drug_end_or_lastadm_int_2 <- NA
+  expect_equal(unique(lot_data(ca, reg)$drugs$end_source), "first drug end")
+})
+
+test_that("progression after initial therapy follows the challenge definition", {
+  img <- data.frame(record_id = "P1", dx_scan_days = c(20, 400, 900),
+                    image_ca = "Progressing/Worsening/Enlarging")
+  x <- make_data(data.frame(drugs = c("Cisplatin, Vinorelbine Tartrate", "Osimertinib"),
+                            start = c(300, 920), end = c(380, 1100)), img = img)
+  # surgery at day 30: progression on day 20 is before any therapy, so skipped
+  surg <- data.frame(record_id = "P1", day = 30, type = "surgery")
+  x2 <- lot_data(data.frame(record_id = "P1", ca_seq = 0, stage_dx_iv = "Stage II",
+                            dx_to_dmets_yrs = NA, tt_os_dx_yrs = 5),
+                 data.frame(record_id = "P1", ca_seq = 0,
+                            regimen_drugs = c("Cisplatin, Vinorelbine Tartrate", "Osimertinib"),
+                            dx_reg_start_int = c(300, 920), dx_reg_end_all_int = c(380, 1100)),
+                 imaging = img, therapy = surg)
+  expect_equal(set_index(x2, "initial_therapy")$index_day, 30)
+  expect_equal(set_index(x2, "progression_after_therapy")$index_day, 400)
+  expect_equal(set_index(x2, "progression_after_therapy", therapy_types = "drug")$index_day, 400)
+  # without the surgery record, first therapy is the day-300 drug: same answer
+  expect_equal(set_index(x, "progression_after_therapy")$index_day, 400)
+  expect_equal(calculate_lot(x2, set_index(x2, "progression_after_therapy"))$regimen, "Osimertinib")
+})
+
+test_that("therapy_events filters rows by pattern", {
+  path <- data.frame(record_id = c("A", "A", "B"),
+                     path_proc = c("Biopsy", "Surgical resection", "Lobectomy"),
+                     dx_path_proc_days = c(5, 40, 30))
+  ev <- therapy_events(path, "dx_path_proc_days", "surgery", "path_proc", "resection|ectomy")
+  expect_equal(ev$day, c(40, 30))
+})
+
+test_that("cohort_summary gives one comparable row", {
+  sim <- simulate_bpc(80)
+  x <- lot_data(sim$ca_dx, sim$regimens, sim$imaging, sim$med_onc)
+  row <- cohort_summary(x, set_index(x), lot_preset("NSCLC"), sim$ca_dx)
+  expect_equal(nrow(row), 1)
+  expect_equal(row$flagged_recurrences_handled, "100.0%")
+})
+
+test_that("sensitivity and attrition tables run", {
+  sim <- simulate_bpc(80)
+  x <- lot_data(sim$ca_dx, sim$regimens, sim$imaging, sim$med_onc)
+  s <- lot_sensitivity(x)
+  expect_equal(nrow(s), 8)
+  a <- lot_attrition(x, k = 0)
+  expect_equal(a$patients[1], 80)
+  expect_equal(a$patients[2] + a$patients[3] + a$patients[7], 80)
+})
+
+test_that("surgery events come from surgical pathology reports", {
+  path <- data.frame(record_id = c("A", "A", "A"),
+                     path_proc_type = c("Cytology", "Surgical pathology", "Other"),
+                     dx_path_proc_days = c(3, 25, 40))
+  ev <- bpc_surgery_events(path)
+  expect_equal(ev$day, 25); expect_equal(ev$type, "surgery")
+})

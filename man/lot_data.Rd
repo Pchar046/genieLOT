@@ -4,7 +4,14 @@
 \alias{lot_data}
 \title{Prepare BPC tables for LOT calculation}
 \usage{
-lot_data(ca_dx, regimens, imaging = NULL, med_onc = NULL, cols = bpc_columns())
+lot_data(
+  ca_dx,
+  regimens,
+  imaging = NULL,
+  med_onc = NULL,
+  therapy = NULL,
+  cols = bpc_columns()
+)
 }
 \arguments{
 \item{ca_dx}{Cancer diagnosis table (`cancer_level_dataset_index`).}
@@ -14,6 +21,10 @@ lot_data(ca_dx, regimens, imaging = NULL, med_onc = NULL, cols = bpc_columns())
 \item{imaging}{Optional imaging table (`imaging_level_dataset`).}
 
 \item{med_onc}{Optional oncologist note table (`med_onc_note_level_dataset`).}
+
+\item{therapy}{Optional surgery or radiation events, from
+[therapy_events()]: one row per event with `record_id`, `day` (days since
+diagnosis) and `type`. Used by the therapy index events.}
 
 \item{cols}{Column mapping from [bpc_columns()].}
 }

@@ -7,6 +7,24 @@ Settings: index = `set_index(x, "recurrence")` (stage I–III: first distant
 metastasis or progression after day 90; stage IV and upstaged patients: diagnosis),
 rules = `lot_rules()` defaults (28-day window, 120-day gap, carboplatin/cisplatin swap).
 
+## Cohort attrition
+
+| Step | Cases |
+|---|---|
+| All cancer cases | 1,869 |
+| Stage IV at diagnosis (indexed at diagnosis) | 797 |
+| Early stage (I–III) | 1,069 |
+| — upstaged: distant spread found within 90 days (indexed at diagnosis) | 154 |
+| — recurred (indexed at recurrence) | 565 |
+| — no recurrence found (no lines, by design) | 350 |
+| Unknown stage | <10 |
+| Cases with an index date | 1,519 |
+| Cases with at least one line after the index | 1,126 |
+| Early-stage recurrences with a line | 311 |
+
+Surgery dates: 4,517 surgical pathology reports linked as a proxy for surgery
+(see ALGORITHM.md).
+
 ## Naive counting vs genieLOT
 
 | | Value |
@@ -17,22 +35,55 @@ rules = `lot_rules()` defaults (28-day window, 120-day gap, carboplatin/cisplati
 | **Naive counting gives the wrong Line 1** | **198 of 311 (63.7%)** |
 | Early treatments correctly excluded | 232 |
 
+## Lines of therapy reached
+
+Counts under 10 masked.
+
+| Line | Patients | % of indexed | Median days on line | Median days to next line |
+|---|---|---|---|---|
+| 1 | 1,126 | 74.1 | 104 | 219.5 |
+| 2 | 772 | 50.8 | 87.5 | 197 |
+| 3 | 473 | 31.1 | 56 | 147 |
+| 4 | 264 | 17.4 | 54.5 | 117.5 |
+| 5 | 136 | 9.0 | 37.5 | 109 |
+| 6 | 73 | 4.8 | 59 | 161.5 |
+| 7 | 36 | 2.4 | 53 | 132 |
+| 8 | 16 | 1.1 | 44 | 104 |
+| 9+ | <10 | — | — | — |
+
+## Sensitivity analysis
+
+The headline finding holds under every definition tested.
+
+| Definition | Early-stage relapses with a line | Naive Line 1 wrong | Reach Line 2 | Reach Line 3 | Median days on Line 1 |
+|---|---|---|---|---|---|
+| Base: recurrence, 28-day window, 120-day gap | 311 | 63.7% | 50.8% | 31.1% | 104 |
+| Challenge definition: progression after initial therapy (drug or surgery) | 303 | 66.0% | 51.9% | 31.6% | 104 |
+| Strict: distant metastasis only | 364 | 53.0% | 52.8% | 32.6% | 105 |
+| Progression confirmed by scan and oncologist note | 288 | 67.0% | 53.0% | 32.9% | 103.5 |
+| Treatment gap 60 days | 311 | 63.7% | 51.0% | 32.0% | 100.5 |
+| Treatment gap 180 days | 311 | 63.7% | 50.6% | 31.0% | 104.5 |
+| Regimen window 42 days | 311 | 63.7% | 50.3% | 29.8% | 105 |
+| Trial drugs excluded | 303 | 62.4% | 46.4% | 25.0% | 112 |
+
 ## Validation against BPC's own flag (`dmets_stage_i_iii`)
 
 Early-stage patients flagged by BPC as later developing distant metastasis:
 
 | | Value |
 |---|---|
-| Found as recurrences by genieLOT | 536 of 583 (91.9%) |
-| Remaining flagged patients | 47, all with spread found within 89 days of diagnosis (median 17 days); now treated as upstaged and counted from diagnosis |
+| **Flagged patients handled** | **583 of 583 (100%)**: 536 indexed at recurrence, 47 upstaged (spread found within 89 days of diagnosis, median 17) and indexed at diagnosis |
+| Overall agreement with the flag (early-stage patients) | 920 of 1,046 (88.0%) |
 | Extra recurrences found (scans and oncologist notes, local or progression only) | 126 |
 
-The 91.9% figure was measured before the upstaged rule was added; with it,
-all 583 flagged patients receive an index date.
+Before the upstaged rule was added, 536 of 583 (91.9%) were captured and
+overall agreement was 83.5%.
 
 ## Data notes
 
-- 17% of regimens have no recorded end date; this affects days on line, not line assignment.
+- 634 of 3,563 regimens (17.8%) have no recorded end date. genieLOT fills 255 of
+  them from the last recorded dose, leaving 10.6% missing. Line assignment is unchanged; median days on line become more
+  accurate (Line 1: 91 → 104 days, Line 2: 65 → 87.5, Line 3: 42 → 56).
 - "Investigational Drug" (masked trial drugs) can be counted or dropped with
   `ignore_drugs`; dropping them lowers the share reaching Line 3 from 31% to 25%.
 

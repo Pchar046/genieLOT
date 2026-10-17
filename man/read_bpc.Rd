@@ -7,7 +7,8 @@
 read_bpc(
   dir,
   patterns = c(ca_dx = "cancer_level_dataset_index", regimens = "regimen_cancer_level",
-    imaging = "imaging_level", med_onc = "med_onc_note_level")
+    imaging = "imaging_level", med_onc = "med_onc_note_level", pathology =
+    "pathology_report_level")
 )
 }
 \arguments{
@@ -17,7 +18,7 @@ read_bpc(
 }
 \value{
 A named list of data frames: `ca_dx`, `regimens`, `imaging`,
-  `med_onc`. Missing files come back as `NULL` with a warning.
+  `med_onc`, `pathology`. Missing files come back as `NULL` with a warning.
 }
 \description{
 Finds the needed BPC files in a folder by name and reads them.

@@ -4,6 +4,10 @@
 #' Every column the package reads is listed here, so a mismatch is fixed in
 #' one place: `bpc_columns(stage = "stage_dx")`.
 #'
+#' Missing regimen end dates are filled from the last recorded dose of any
+#' drug in the regimen (columns matching `reg_end_lastdose`, a regular
+#' expression), then from `reg_end_fallback`. Set either to `NA` to skip it.
+#'
 #' Time columns are converted to days since diagnosis of the index cancer.
 #' Set the matching `*_unit` to "days", "months" or "years".
 #'
@@ -25,6 +29,8 @@ bpc_columns <- function(...) {
     reg_number = "regimen_number",
     reg_drugs = "regimen_drugs", reg_sep = ",",
     reg_start = "dx_reg_start_int", reg_end = "dx_reg_end_all_int",
+    reg_end_lastdose = "^dx_drug_end_or_lastadm_int_[0-9]+$",
+    reg_end_fallback = "dx_reg_end_any_int",
     reg_unit = "days",
     img_time = "dx_scan_days", img_status = "image_ca", img_unit = "days",
     md_time = "dx_md_visit_days", md_status = "md_ca_status", md_unit = "days",
