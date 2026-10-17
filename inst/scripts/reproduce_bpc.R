@@ -1,0 +1,54 @@
+# Reproduce the genieLOT results on AACR Project GENIE BPC data
+# ----------------------------------------------------------------
+# Needs approved GENIE BPC access (public releases are self-serve on Synapse).
+# Put these 4 files from one cohort (e.g. NSCLC 2.0-public) in one folder:
+#   cancer_level_dataset_index.csv, regimen_cancer_level_dataset.csv,
+#   imaging_level_dataset.csv, med_onc_note_level_dataset.csv
+#
+# Run:
+#   source(system.file("scripts", "reproduce_bpc.R", package = "genieLOT"))
+#   reproduce_bpc("C:/genie_data")
+#
+# Output: summary tables only (counts under 10 masked), saved to ./genieLOT_results.
+# No patient-level rows are written.
+
+library(genieLOT)
+
+reproduce_bpc <- function(data_dir, out_dir = "genieLOT_results",
+                          preset = "NSCLC", min_count = 10) {
+  raw <- read_bpc(data_dir)
+  cols <- bpc_columns(img_status = "image_overall",
+                      dmets_time = "dx_to_dmets_days", dmets_unit = "days",
+                      os_time = "tt_os_dx_days", os_unit = "days")
+  x <- lot_data(raw$ca_dx, raw$regimens, raw$imaging, raw$med_onc, cols = cols)
+  idx <- set_index(x, "recurrence")
+  rules <- lot_preset(preset)
+
+  cmp <- compare_lot(x, idx, rules)
+  val <- validate_index(x, idx, raw$ca_dx, cols = cols)
+  lines_all <- summarize_lot(cmp$correct)
+  lines_no_trial <- summarize_lot(calculate_lot(
+    x, idx, lot_rules(window = rules$window, gap = rules$gap, swaps = rules$swaps,
+                      add_without_new_line = rules$add_without_new_line,
+                      ignore_drugs = "Investigational Drug")))
+
+  dir.create(out_dir, showWarnings = FALSE)
+  save <- function(df, name) {
+    df <- suppress_small(df, k = min_count)
+    utils::write.csv(df, file.path(out_dir, name), row.names = FALSE)
+    df
+  }
+  out <- list(
+    cohort = data.frame(cancer_cases = nrow(x$cases),
+                        early_stage = sum(x$cases$early_stage %in% TRUE),
+                        stage_iv = sum(x$cases$early_stage %in% FALSE)),
+    naive_vs_correct = save(cmp$summary, "naive_vs_correct.csv"),
+    validation = save(val$summary, "validation.csv"),
+    lines = save(lines_all, "lines_of_therapy.csv"),
+    lines_without_trial_drugs = save(lines_no_trial, "lines_without_trial_drugs.csv")
+  )
+  utils::write.csv(out$cohort, file.path(out_dir, "cohort.csv"), row.names = FALSE)
+  print(out)
+  message("Summary tables saved to ", normalizePath(out_dir))
+  invisible(out)
+}
