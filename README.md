@@ -12,7 +12,7 @@ index event you choose, so those patients get the right lines.
 
 ```r
 # install.packages("remotes")
-remotes::install_github("<pchar046>/genieLOT")
+remotes::install_github("pchar046/genieLOT")
 ```
 
 ## Quick start (fake data, no access needed)
