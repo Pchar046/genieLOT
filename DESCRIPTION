@@ -1,0 +1,26 @@
+Package: genieLOT
+Type: Package
+Title: Line of Therapy Calculation for AACR Project GENIE BPC Data
+Version: 0.1.0
+Authors@R: person("Patrick", "Charles", role = c("aut", "cre"),
+    email = "pjchar046@gmail.com")
+Description: Calculates oncology lines of therapy (LOT) from AACR Project
+    GENIE BioPharma Collaborative (BPC) data. Users choose their own index
+    event (diagnosis, distant metastasis, progression, recurrence, or a custom
+    date) and their own line rules (grouping window, treatment gap, drug swaps,
+    add-on drugs). Correctly handles early-stage (I-III) patients who receive
+    adjuvant or neoadjuvant therapy before a later recurrence, and quantifies
+    how often simple counting from diagnosis mislabels their lines.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.1.0)
+Imports:
+    ggplot2,
+    grDevices,
+    stats,
+    utils
+Suggests:
+    shiny,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+RoxygenNote: 7.3.1
