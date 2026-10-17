@@ -170,6 +170,9 @@ test_that("the app server computes every output", {
     expect_match(val()$summary$value[1], "100.0%")
     session$setInputs(trial = FALSE, privacy = FALSE)
     expect_true(nrow(smry()) > 0)
+    expect_match(output$attrition, "All cancer cases")
+    session$setInputs(run_sens = 1)
+    expect_equal(nrow(sens()), 8)
   })
 })
 

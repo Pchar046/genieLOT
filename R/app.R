@@ -100,6 +100,16 @@ run_lot_app <- function(x = NULL, ca_dx = NULL, privacy = TRUE, cols = NULL) {
             shiny::br(),
             shiny::tableOutput("summary"),
             shiny::downloadButton("dl", "Download summary (csv)")),
+          shiny::tabPanel("Cohort",
+            shiny::br(),
+            shiny::p("Who is in the analysis, step by step, under the current index and rules."),
+            shiny::tableOutput("attrition")),
+          shiny::tabPanel("Sensitivity",
+            shiny::br(),
+            shiny::p("The same data under 8 standard definitions, side by side. Takes a moment."),
+            shiny::actionButton("run_sens", "Run sensitivity analysis"),
+            shiny::br(), shiny::br(),
+            shiny::tableOutput("sens")),
           shiny::tabPanel("Validation",
             shiny::br(),
             shiny::uiOutput("val_ui")),
@@ -185,6 +195,21 @@ run_lot_app <- function(x = NULL, ca_dx = NULL, privacy = TRUE, cols = NULL) {
     output$dl <- shiny::downloadHandler(
       filename = function() "lot_summary.csv",
       content = function(f) utils::write.csv(mask(smry()), f, row.names = FALSE))
+
+    output$attrition <- shiny::renderTable({
+      a <- lot_attrition(x, idx(), rules(), k = if (isTRUE(input$privacy)) 10 else 0)
+      names(a) <- c("Step", "Cases"); a
+    })
+    sens <- shiny::eventReactive(input$run_sens, {
+      shiny::withProgress(message = "Running 8 definitions", value = 0.3, {
+        lot_sensitivity(x, default_scenarios(x, rules()), k = if (isTRUE(input$privacy)) 10 else 0)
+      })
+    })
+    output$sens <- shiny::renderTable({
+      pretty(sens(), c("Definition", "Patients with lines", "Early-stage relapses",
+                       "% naive Line 1 wrong", "% reach Line 2", "% reach Line 3",
+                       "Median days on Line 1"))
+    })
 
     output$val_ui <- shiny::renderUI({
       if (!has_flag) return(shiny::p("Pass the raw diagnosis table (ca_dx) with dmets_stage_i_iii to see validation."))
