@@ -3,12 +3,12 @@
 Line of therapy (LOT) calculation for AACR Project GENIE BPC data, with a
 user-chosen index event and user-defined line rules.
 
-**The problem:** early-stage (I–III) patients often get adjuvant or
+**The problem:** early stage (I–III) patients often get adjuvant or
 neoadjuvant treatment, then recur years later. Counting lines from diagnosis
 wrongly calls that early treatment "Line 1". genieLOT starts counting at the
 index event you choose, so those patients get the right lines.
 
-**Results on real GENIE BPC data:** see [RESULTS.md](RESULTS.md) (naive counting gets Line 1 wrong for 63.7% of early-stage NSCLC recurrences).
+**Results on real GENIE BPC data:** see [RESULTS.md](RESULTS.md) (naive counting gets Line 1 wrong for 63.7% of early stage NSCLC recurrences).
 
 ## Demo
 
